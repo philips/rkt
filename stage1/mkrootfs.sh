@@ -34,7 +34,7 @@ mkdir -p "${ROOTDIR}"
 
 # extract $USR from $URL
 pushd "${WORK}"
-curl "${URL}" | gzip -cd | cpio --extract "${USRFS}"
+cat /home/philips/src/github.com/coreos-inc/rkt/coreos_production_pxe_image.cpio.gz | gzip -cd | cpio --extract "${USRFS}"
 
 # extra stuff for stage1 which will come/go as things mature (reaper in bash for now)
 EXTRAS="bin/bash
@@ -78,6 +78,7 @@ cat > "${FILELIST}" <<-EOF
 	lib64/libitm.so
 	lib64/libitm.so.1
 	lib64/libitm.so.1.0.0
+	lib64/libblkid.so.1
 	lib64/libstdc++.so
 	lib64/libstdc++.so.6
 	lib64/libstdc++.so.6.0.17
