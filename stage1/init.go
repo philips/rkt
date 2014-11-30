@@ -5,11 +5,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/coreos-inc/rkt/pkg/mount"
-	"github.com/docker/libcontainer/devices"
 	"github.com/coreos-inc/rkt/rkt"
+	"github.com/docker/libcontainer/devices"
 )
 
 const (
@@ -71,7 +72,6 @@ func main() {
 				CgroupPermissions: "rwm",
 				FileMode:          0666,
 			},
-
 			// /dev/urandom,/dev/random
 			{
 				Path:              "/dev/urandom",
@@ -90,12 +90,50 @@ func main() {
 				FileMode:          0666,
 			},
 		},
+		Mounts: []*mount.Mount{
+			{
+				Type:        "bind",
+				Source:      "/dev/console",
+				Destination: "/dev/console",
+				Writable:    true,
+				Slave:       true,
+			},
+			{
+				Type:        "bind",
+				Source:      "/dev/ptmx",
+				Destination: "/dev/ptmx",
+				Writable:    true,
+				Slave:       true,
+			},
+			{
+				Type:        "bind",
+				Source:      "/dev/pts",
+				Destination: "/dev/pts",
+				Writable:    true,
+				Slave:       true,
+			},
+		},
 	}
+
+	os.MkdirAll(filepath.Join(rkt.Stage1RootfsPath(c.Root), "croot"), 0755)
 	println(rkt.Stage1RootfsPath(c.Root))
 	if err = mount.InitializeMountNamespace(rkt.Stage1RootfsPath(c.Root), false, &mc); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize mount namespace to %s: %v\n", rkt.Stage1RootfsPath(c.Root), err)
 		os.Exit(2)
 
+	}
+
+	crm := mount.Mount{
+		Type:        "bind",
+		Source:      "/",
+		Destination: "/croot",
+		Writable:    true,
+		Slave:       true,
+	}
+
+	if err := crm.Mount("/", ""); err != nil {
+		fmt.Fprintf(os.Stderr, "croot mount failed: %v\n", err)
+		os.Exit(2)
 	}
 
 	// TODO(philips): compile a static version of systemd-nspawn with this
@@ -145,6 +183,14 @@ func main() {
 	env := os.Environ()
 
 	fmt.Fprintf(os.Stderr, "%v\n", args)
+
+	/*
+		if err := syscall.Exec("/usr/bin/bash", []string{}, env); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to execute %s %v: %v\n", ex, args, err)
+			os.Exit(6)
+		}
+	*/
+
 	if err := syscall.Exec(ex, args, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute %s %v: %v\n", ex, args, err)
 		os.Exit(6)

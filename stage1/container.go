@@ -185,7 +185,7 @@ func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--uuid=" + c.Manifest.UUID.String(),
 		"--machine=" + c.Manifest.UUID.String(),
-		"--directory=/container",
+		"--directory=/",
 	}
 
 	for _, am := range c.Apps {
