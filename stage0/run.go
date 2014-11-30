@@ -173,10 +173,54 @@ func Setup(cfg Config) (string, error) {
 	return dir, nil
 }
 
+func chroot() {
+	if err := syscall.Chroot("/var/lib/rkt/nspawn"); err != nil {
+		log.Fatalf("Failed to chroot nspawn: %v\n", err)
+	}
+}
+
+func moveRoot() {
+	if err := syscall.Mount("/var/lib/rkt/nspawn", "/", "", syscall.MS_MOVE, ""); err != nil {
+		log.Fatalf("mount move %s into / %s", "/var/lib/rkt/nspawn", err)
+	}
+	if err := syscall.Chroot("/var/lib/rkt/nspawn"); err != nil {
+		log.Fatalf("Failed to chroot nspawn: %v\n", err)
+	}
+
+}
+
+func pivotRoot() {
+	rootfs := "/var/lib/rkt/nspawn"
+	pivotDir, err := ioutil.TempDir(rootfs, ".pivot_root")
+	if err != nil {
+		log.Fatalf("can't create pivot_root dir %s, error %v", pivotDir, err)
+	}
+
+	if err := syscall.PivotRoot(rootfs, pivotDir); err != nil {
+		log.Fatalf("pivot_root %s", err)
+	}
+
+	if err := syscall.Chdir("/"); err != nil {
+		log.Fatalf("chdir / %s", err)
+	}
+
+	// path to pivot dir now changed, update
+	pivotDir = filepath.Join("/", filepath.Base(pivotDir))
+	if err := syscall.Unmount(pivotDir, syscall.MNT_DETACH); err != nil {
+		log.Fatalf("unmount pivot_root dir %s", err)
+	}
+
+	os.Remove(pivotDir)
+}
+
 // Run actually runs the container by exec()ing the stage1 init inside
 // the container filesystem.
 func Run(dir string, debug bool) {
 	log.Printf("Pivoting to filesystem %s", dir)
+	chroot()
+	//moveRoot()
+	//pivotRoot()
+
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
 	}

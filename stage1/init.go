@@ -20,6 +20,13 @@ func main() {
 	root := "."
 	debug := len(os.Args) > 1 && os.Args[1] == "debug"
 
+	// TODO(philips): compile a static version of systemd-nspawn with this
+	// stupidity patched out
+	_, err := os.Stat("/run/systemd/system")
+	if os.IsNotExist(err) {
+		os.MkdirAll("/run/systemd/system", 0755)
+	}
+
 	c, err := LoadContainer(root)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
@@ -70,24 +77,6 @@ func main() {
 	}
 
 	env := os.Environ()
-
-	cwd, _ := os.Getwd()
-	if err := syscall.Chroot("/var/lib/rkt/nspawn"); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to chroot nspawn: %v\n", err)
-		os.Exit(5)
-	}
-	if err := os.Chdir(cwd); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to chdir: %v\n", err)
-		os.Exit(5)
-	}
-
-	// TODO(philips): compile a static version of systemd-nspawn with this
-	// stupidity patched out
-	_, err = os.Stat("/run/systemd/system")
-	if os.IsNotExist(err) {
-		os.MkdirAll("/run/systemd/system", 0755)
-	}
-
 
 	if err := syscall.Exec(ex, args, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute nspawn: %v\n", err)

@@ -16,7 +16,7 @@ mount -o bind /dev /var/lib/rkt/nspawn/dev
 mount -o bind /dev/pts /var/lib/rkt/nspawn/dev/pts
 
 mkdir -p /var/lib/rkt/nspawn/run
-mount -o bind /dev /var/lib/rkt/nspawn/run
+mount -o bind /run /var/lib/rkt/nspawn/run
 
 mkdir -p /var/lib/rkt/nspawn/sys
-mount -o bind /dev /var/lib/rkt/nspawn/sys
+mount -o bind /sys /var/lib/rkt/nspawn/sys
