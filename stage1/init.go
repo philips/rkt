@@ -5,10 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
-
-	"github.com/coreos-inc/rkt/rkt"
 )
 
 const (
@@ -38,7 +35,7 @@ func main() {
 		os.MkdirAll("/run/systemd/system", 0755)
 	}
 
-	ex := filepath.Join(rkt.Stage1RootfsPath(c.Root), nspawnBin)
+	ex := nspawnBin
 	if _, err := os.Stat(ex); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed locating nspawn: %v\n", err)
 		os.Exit(3)
@@ -69,9 +66,21 @@ func main() {
 		args = append(args, "--show-status=0")   // silence systemd initialization status output
 	}
 
+	if err := syscall.Chroot("stage1"); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to chroot: %v\n", err)
+		os.Exit(5)
+	}
+	if err := os.Symlink("/usr/lib64", "/lib64"); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to symlink: %v\n", err)
+		os.Exit(5)
+	}
 	env := os.Environ()
 
-	if err := syscall.Exec(ex, args, env); err != nil {
+	fmt.Fprintf(os.Stderr, "%v %v\n", ex, args)
+	fi, err := os.Stat("/tmp")
+	fmt.Fprintf(os.Stderr, "stat nspawn: %v %v\n", fi, err)
+
+	if err := syscall.Exec("/usr/bin/systemd-nspawn", []string{"/usr/bin/systemd-nspawn", "--help"}, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute nspawn: %v\n", err)
 		os.Exit(5)
 	}
