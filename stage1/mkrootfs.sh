@@ -215,6 +215,8 @@ EOF
 install -d -m 0755 "${ROOTDIR}/usr/lib/systemd/system/default.target.wants"
 install -d -m 0755 "${ROOTDIR}/usr/lib/systemd/system/sockets.target.wants"
 
+cp ../systemd-nspawn "${ROOTDIR}/usr/bin/"
+
 # simple reaper script for collecting the exit statuses of the apps
 cat > "${ROOTDIR}/reaper.sh" <<-'EOF'
 #!/usr/bin/bash
@@ -234,6 +236,7 @@ chmod 755 "${ROOTDIR}/reaper.sh"
 
 install -d "${ROOTDIR}/etc"
 echo "rocket" > "${ROOTDIR}/etc/os-release"
+
 
 # parent dir for the stage2 bind mounts
 install -d "${ROOTDIR}/opt/stage2"

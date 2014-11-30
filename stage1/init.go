@@ -5,12 +5,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 
 	"github.com/coreos-inc/rkt/pkg/mount"
 	"github.com/coreos-inc/rkt/rkt"
-	"github.com/docker/libcontainer/devices"
 )
 
 const (
@@ -33,8 +33,9 @@ func main() {
 		os.Exit(2)
 	}
 
-	mc := mount.MountConfig{
+	_ = mount.MountConfig{
 		NoPivotRoot: true,
+/*
 		DeviceNodes: []*devices.Device{
 			// /dev/null and zero
 			{
@@ -113,36 +114,51 @@ func main() {
 				Slave:       true,
 			},
 		},
+*/
 	}
 
-	os.MkdirAll(filepath.Join(rkt.Stage1RootfsPath(c.Root), "croot"), 0755)
+/*
 	println(rkt.Stage1RootfsPath(c.Root))
 	if err = mount.InitializeMountNamespace(rkt.Stage1RootfsPath(c.Root), false, &mc); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize mount namespace to %s: %v\n", rkt.Stage1RootfsPath(c.Root), err)
 		os.Exit(2)
 
 	}
+*/
 
-	crm := mount.Mount{
-		Type:        "bind",
-		Source:      "/",
-		Destination: "/croot",
-		Writable:    true,
-		Slave:       true,
+	os.MkdirAll(filepath.Join(rkt.Stage1RootfsPath(c.Root), "dev", "pts"), 0755)
+	os.OpenFile(filepath.Join(rkt.Stage1RootfsPath(c.Root), "dev", "ptmx"), os.O_CREATE, 0644)
+	mnts := []*mount.Mount{
+		{
+			Type:        "bind",
+			Source:      "/proc",
+			Destination: 	filepath.Join("proc"),
+			Writable:    true,
+			Slave:       true,
+		},
+		{
+			Type:        "bind",
+			Source:      "/dev/pts",
+			Destination: 	filepath.Join("dev", "pts"),
+			Writable:    true,
+			Slave:       true,
+		},
+		{
+			Type:        "bind",
+			Source:      "/dev/ptmx",
+			Destination: 	filepath.Join("dev", "ptmx"),
+			Writable:    true,
+			Slave:       true,
+		},
 	}
 
-	if err := crm.Mount("/", ""); err != nil {
-		fmt.Fprintf(os.Stderr, "croot mount failed: %v\n", err)
-		os.Exit(2)
+	for _, m := range mnts {
+		println(m.Destination)
+		if err := m.Mount(rkt.Stage1RootfsPath(c.Root), ""); err != nil {
+			fmt.Fprintf(os.Stderr, "croot mount failed: %v\n", err)
+			os.Exit(2)
+		}
 	}
-
-	// TODO(philips): compile a static version of systemd-nspawn with this
-	// stupidity patched out
-	_, err = os.Stat("/run/systemd/system")
-	if os.IsNotExist(err) {
-		os.MkdirAll("/run/systemd/system", 0755)
-	}
-	os.MkdirAll("/tmp", 0755)
 
 	ex := nspawnBin
 	if _, err := os.Stat(ex); err != nil {
@@ -175,10 +191,23 @@ func main() {
 		args = append(args, "--show-status=0")   // silence systemd initialization status output
 	}
 
+	if err := syscall.Chroot("stage1"); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to chroot: %v\n", err)
+		os.Exit(5)
+	}
+
 	if err := os.Symlink("/usr/lib64", "/lib64"); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to symlink: %v\n", err)
 		os.Exit(5)
 	}
+
+	// TODO(philips): compile a static version of systemd-nspawn with this
+	// stupidity patched out
+	_, err = os.Stat("/run/systemd/system")
+	if os.IsNotExist(err) {
+		os.MkdirAll("/run/systemd/system", 0755)
+	}
+	os.MkdirAll("/tmp", 0755)
 
 	env := os.Environ()
 
@@ -190,6 +219,17 @@ func main() {
 			os.Exit(6)
 		}
 	*/
+
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	err = cmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to execute %v: %v\n", args, err)
+		os.Exit(6)
+
+	}
 
 	if err := syscall.Exec(ex, args, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute %s %v: %v\n", ex, args, err)
