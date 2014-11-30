@@ -184,7 +184,8 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--uuid=" + c.Manifest.UUID.String(),
-		"--directory=.",
+		"--machine=" + c.Manifest.UUID.String(),
+		"--directory=/container",
 	}
 
 	for _, am := range c.Apps {

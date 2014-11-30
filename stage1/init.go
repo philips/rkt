@@ -144,6 +144,7 @@ func main() {
 
 	env := os.Environ()
 
+	fmt.Fprintf(os.Stderr, "%v\n", args)
 	if err := syscall.Exec(ex, args, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute %s %v: %v\n", ex, args, err)
 		os.Exit(6)

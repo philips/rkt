@@ -81,6 +81,9 @@ cat > "${FILELIST}" <<-EOF
 	lib64/libblkid.so
 	lib64/libblkid.so.1
 	lib64/libblkid.so.1.1.0
+	lib64/libuuid.so.1
+	lib64/libuuid.so.1.3.0
+	lib64/libuuid.so
 	lib64/libstdc++.so
 	lib64/libstdc++.so.6
 	lib64/libstdc++.so.6.0.17
