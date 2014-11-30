@@ -34,7 +34,7 @@ mkdir -p "${ROOTDIR}"
 
 # extract $USR from $URL
 pushd "${WORK}"
-curl "${URL}" | gzip -cd | cpio --extract "${USRFS}"
+cat /home/philips/src/github.com/coreos/rocket/coreos_production_pxe_image.cpio.gz | gzip -cd | cpio --extract "${USRFS}"
 
 # extra stuff for stage1 which will come/go as things mature (reaper in bash for now)
 EXTRAS="bin/bash
@@ -247,4 +247,3 @@ tar cf "${BINDIR}/s1rootfs.tar" -C "${ROOTDIR}" .
 OUTDIR=$(dirname "${OUTPUT}")
 [ -d "$OUTDIR" ] || mkdir -p "${OUTDIR}"
 go-bindata -o "${OUTPUT}" -prefix $(realpath "${BINDIR}") -pkg=stage1_rootfs "${BINDIR}"
-rm -Rf "${WORK}"
